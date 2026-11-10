@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0b1f3a;
+  --navy-light: #163356;
+  --navy-muted: #243b5c;
+  --gold: #c9a227;
+  --gold-light: #d4af37;
+  --gold-soft: #f4e9c4;
+  --surface: #f5f7fa;
+  --surface-muted: #eef1f6;
+  --border: #e6eaf0;
+  --ink: #0b1f3a;
+  --ink-muted: #5b6575;
+  --ink-subtle: #8b93a3;
+  --background: #f5f7fa;
+  --foreground: #0b1f3a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-navy-muted: var(--navy-muted);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-soft: var(--gold-soft);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --font-sans: var(--font-plus-jakarta);
+  --font-display: var(--font-plus-jakarta);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.45s ease-out both;
+}
+
+.animate-fade-in-delay {
+  animation: fade-in 0.55s ease-out 0.08s both;
+}
+
+.animate-fade-in-delay-2 {
+  animation: fade-in 0.55s ease-out 0.16s both;
+}
+
+.gold-rule {
+  height: 2px;
+  width: 48px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+.mesh-hero {
+  background:
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(201, 162, 39, 0.12), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(11, 31, 58, 0.06), transparent 50%),
+    linear-gradient(180deg, #ffffff 0%, #f5f7fa 100%);
+}
+
+.table-row-hover tr {
+  transition: background-color 0.15s ease;
+}
+
+.table-row-hover tr:hover {
+  background-color: rgba(11, 31, 58, 0.03);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c8d0dc;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #aeb8c7;
+  background-clip: content-box;
+  border: 2px solid transparent;
+}

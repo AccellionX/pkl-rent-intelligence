@@ -1,0 +1,6 @@
+property,address,city,state,sqft,asking_rent,beds,baths,distance_miles,source
+135-153 Waterman Avenue,135 Waterman Ave,East Providence,RI,711,1788,1,1,0.67,HelloData
+446 Waterman Ave,446 Waterman Ave,East Providence,RI,710,1900,1,1,1.5,Apartments.com
+East Point Apartments,140 East Point Dr,Rumford,RI,710,2291,1,1,1.72,HelloData
+Kettle Point,12 Captain John Jacobs Rd,East Providence,RI,700,2220,1,1,1.9,Apartments.com
+Wayland Manor,500 Angell St,Providence,RI,783,1950,1,1,2.2,Apartments.com
