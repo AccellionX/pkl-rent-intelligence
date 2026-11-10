@@ -173,7 +173,14 @@ function pick<T>(rand: () => number, arr: T[]): T {
 }
 
 function sampleAmenities(rand: () => number, count: number) {
-  const shuffled = [...AMENITY_POOL].sort(() => rand() - 0.5);
+  // Deterministic Fisher–Yates — avoid Array.sort(rand) (non-deterministic comparator calls)
+  const shuffled = [...AMENITY_POOL];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = shuffled[i]!;
+    shuffled[i] = shuffled[j]!;
+    shuffled[j] = tmp;
+  }
   return shuffled.slice(0, count);
 }
 
