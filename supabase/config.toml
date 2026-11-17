@@ -1,0 +1,16 @@
+# Minimal Supabase CLI project config for local migrations.
+# Apply with: supabase db push   or   supabase migration up
+
+project_id = "pkl-rent-intelligence"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[auth]
+enabled = true
+
+[storage]
+enabled = true
