@@ -5,8 +5,8 @@ import type { Database } from "@/domain/database.types";
 import { getSupabasePublicEnv } from "./env";
 
 /**
- * Browser Supabase client (anon key only).
- * Returns null when the app is in demo mode (no Supabase env).
+ * Browser Supabase client (anon/publishable key only).
+ * Returns null when public Supabase env is missing (unconfigured — not a demo fallback).
  */
 export function createSupabaseBrowserClient() {
   const env = getSupabasePublicEnv();

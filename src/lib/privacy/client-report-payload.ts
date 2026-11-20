@@ -3,6 +3,8 @@
  * (names, phone numbers, email addresses).
  */
 
+import { validationError } from "@/lib/api/errors";
+
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 const PHONE_RE =
   /(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b/;
@@ -25,6 +27,36 @@ export interface PiiScanResult {
   violations: string[];
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Storage object keys / signed URLs often contain digit runs that trip PHONE_RE. */
+function isStorageOrAssetPath(path: string, value: string): boolean {
+  if (
+    /\.(storagePath|photoPaths|signedUrl|storage_path)$/i.test(path) ||
+    /photoPaths\[\d+\]$/i.test(path)
+  ) {
+    return true;
+  }
+  if (value.includes("/properties/") && /\/(manual|reuse|mls)\//.test(value)) {
+    return true;
+  }
+  if (/^https?:\/\//i.test(value) && /\/storage\/v1\/object\/sign\//i.test(value)) {
+    return true;
+  }
+  return false;
+}
+
+/** Internal ids (UUIDs / *Id fields) must not be treated as prospect phone numbers. */
+function isInternalIdPath(path: string, value: string): boolean {
+  if (UUID_RE.test(value.trim())) return true;
+  if (/\.(comparablePropertyId|propertyId|unitTypeId|reportRunId|organizationId|id)$/i.test(path)) {
+    return true;
+  }
+  if (/Id$/i.test(path.split(".").pop() ?? "")) return true;
+  return false;
+}
+
 function scanValue(value: unknown, path: string, violations: string[]): void {
   if (value == null) return;
 
@@ -32,7 +64,11 @@ function scanValue(value: unknown, path: string, violations: string[]): void {
     if (EMAIL_RE.test(value)) {
       violations.push(`${path}: email-like value`);
     }
-    if (PHONE_RE.test(value)) {
+    if (
+      !isStorageOrAssetPath(path, value) &&
+      !isInternalIdPath(path, value) &&
+      PHONE_RE.test(value)
+    ) {
       violations.push(`${path}: phone-like value`);
     }
     return;
@@ -64,8 +100,9 @@ export function scanClientReportPayload(payload: unknown): PiiScanResult {
 export function assertNoClientProspectPii(payload: unknown): void {
   const result = scanClientReportPayload(payload);
   if (!result.ok) {
-    throw new Error(
-      `Client report payload contains prospect PII: ${result.violations.join("; ")}`,
+    throw validationError(
+      `Client report payload contains prospect PII. Remove phone-like or email values from titles, names, and unit numbers before generating a client PDF.`,
+      { violations: result.violations },
     );
   }
 }

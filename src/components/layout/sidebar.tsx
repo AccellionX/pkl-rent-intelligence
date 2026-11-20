@@ -1,37 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Building2,
-  CalendarClock,
   FileText,
   LayoutDashboard,
-  LineChart,
   Settings2,
   Upload,
-  Home,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { VETERANS_BUILDING_ID } from "@/data/veterans";
+import { useLiveOrg } from "@/hooks/use-live-org";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const nav = [
-  { href: "/", label: "Portfolio", icon: LayoutDashboard },
-  { href: "/buildings", label: "Buildings", icon: Building2 },
-  { href: "/units", label: "Units", icon: Home },
-  {
-    href: `/buildings/${VETERANS_BUILDING_ID}`,
-    label: "30 Veterans",
-    icon: LineChart,
-  },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/buildings", label: "Properties", icon: Building2 },
+  { href: "/upload", label: "Data Uploads", icon: Upload },
   { href: "/reports", label: "Report History", icon: FileText },
-  { href: "/reports/schedule", label: "Scheduling", icon: CalendarClock },
-  { href: "/upload", label: "AI Upload", icon: Upload },
-  { href: "/settings", label: "Demo Settings", icon: Settings2 },
+  { href: "/settings", label: "Settings", icon: Settings2 },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const live = useLiveOrg();
+
+  async function signOut() {
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    toast.success("Signed out successfully.");
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-white/10 bg-navy text-white">
@@ -45,7 +50,7 @@ export function Sidebar() {
             Rent Intelligence
           </div>
         </Link>
-        <p className="mt-2 text-xs text-white/55">Portfolio pricing & leasing intel</p>
+        <p className="mt-2 text-xs text-white/55">Rental pricing & leasing intelligence</p>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -57,7 +62,7 @@ export function Sidebar() {
           const Icon = item.icon;
           return (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.label}`}
               href={item.href}
               className={cn(
                 "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all",
@@ -81,10 +86,30 @@ export function Sidebar() {
 
       <div className="border-t border-white/10 p-4">
         <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="text-[11px] uppercase tracking-wider text-gold/90">Demo mode</div>
-          <p className="mt-1 text-xs leading-relaxed text-white/60">
-            Sample portfolio data with live local edits. No paid APIs connected.
-          </p>
+          <div className="truncate text-xs text-white/70">
+            {live.loading
+              ? "Loading account…"
+              : live.authenticated
+                ? live.email
+                : "Not signed in"}
+          </div>
+          {live.authenticated ? (
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-gold hover:text-gold/80"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="mt-2 inline-block text-xs font-medium text-gold hover:text-gold/80"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
     </aside>

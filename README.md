@@ -1,131 +1,168 @@
 # PKL Rent Intelligence
 
-Rental pricing intelligence for **PKL Management LLC**.
+Commercial rental pricing and leasing intelligence for **PKL Management LLC**.
 
-The repository ships a polished **demo UI** (Zustand + localStorage, featured 30 Veterans 1BR workflow) plus a **Phase 1 live foundation** (Supabase Postgres/Auth/Storage + Next.js API routes). Demo and live modes do not mix data.
+This repository contains the **Phase 1** application: authenticated, org-scoped property workflows (uploads, comparable review, pricing narrative, weekly metrics, branded PDF, optional Google Drive backup).
 
-## Modes
+**Owner:** AccellionX (private backup / eventual client handover)  
+**Status:** Local engineering acceptance and local customer journey **passed**. Production deployment is **deferred**. Milestone 1 is the only formally submitted milestone.
 
-| Mode | When | Behavior |
-|------|------|----------|
-| **Demo** | `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` missing | Existing UI uses seed + localStorage. Live `/api/*` writes/lists return `503 demo_mode` and never fall back to seed data. |
-| **Live** | Both public Supabase env vars set | Authenticated API access to org-scoped Postgres data with RLS. |
+## What is verified vs outstanding
 
-Check mode: `GET /api/health`.
+| Scope | Status |
+|-------|--------|
+| Local live app (auth, CRUD, uploads, review, narrative, PDF, Drive UX) | Verified locally |
+| Automated suite (`npm test` / typecheck / lint / build) | Verified |
+| Contractual 855 numerical parity / client comparable decisions | Outstanding |
+| Google Geocoding billing for MLS distances | Outstanding |
+| Veterans gold PDF reference parity | Outstanding |
+| Production / Vercel deployment | Not authorized yet |
+
+See `docs/phase1/TASK_22_REPOSITORY_RELEASE_READINESS.md` and prior Phase 1 task reports under `docs/phase1/`.
 
 ## Stack
 
 - Next.js 16 + React 19 + TypeScript  
 - Tailwind CSS 4 + Radix UI  
-- Zustand (demo persistence only)  
-- Supabase (Postgres, Auth, Storage) for live mode  
-- Zod validation, Vitest unit tests  
-- jsPDF / SheetJS / Papa Parse (existing demo upload & PDF tools)
+- Supabase (Postgres, Auth, Storage) with RLS  
+- Anthropic Claude (optional narrative drafts)  
+- Google Drive OAuth (optional finalized PDF backup)  
+- Google Geocoding (optional MLS distances)  
+- Vitest unit/integration tests  
 
-## Local development (demo)
+## Prerequisites
 
-Requires **Node.js 20.9+**.
+- Node.js **20.9+** (see `.nvmrc`)  
+- npm (lockfile: `package-lock.json`)  
+- A Supabase project with Phase 1 migrations applied  
+- Local `.env` from `.env.example` (never commit secrets)
+
+## Quick start (live local)
 
 ```bash
 npm install
+cp .env.example .env
+# Fill REQUIRED Supabase values (see Environment below)
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). No env vars required for demo mode.
+Open [http://localhost:3000](http://localhost:3000) → Sign in with a staff account that belongs to an organization.
 
 ```bash
-npm run lint
-npm run typecheck
 npm test
+npm run typecheck
+npm run lint
 npm run build
 ```
 
-## Supabase setup (live mode)
+## Environment
 
-1. Create a Supabase project.
-2. Copy `.env.example` → `.env.local` and fill:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (**server only** — never `NEXT_PUBLIC_`)
-3. Apply the foundation migration:
+Full variable list, required vs optional, and server-only vs browser-safe: **`.env.example`**.
+
+| Category | Variables | Notes |
+|----------|-----------|--------|
+| Required (live) | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Anon is browser-safe; service role is **server-only** |
+| Optional AI | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Server-only; fallback draft if unset |
+| Optional geo | `GOOGLE_GEOCODING_API_KEY` | Server-only; needs GCP billing |
+| Optional Drive | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN`, … | Server-only; dedicated PKL Google account |
+| Optional CLI | `SUPABASE_ACCESS_TOKEN`, `DATABASE_URL` | Local machine only |
+| Local e2e only | `PKL_E2E_EMAIL`, `PKL_E2E_PASSWORD`, `PKL_CLIENT_SOURCE_DIR` | Never commit values |
+
+Demo fixtures activate only when `PKL_ALLOW_DEMO_MODE=true` (never on customer hosts).
+
+## Database migrations
+
+Apply SQL in timestamp order against the target project (reconcile history before any `db push` — migrations were previously applied manually):
+
+```text
+supabase/migrations/20260317120000_phase1_foundation.sql
+supabase/migrations/20260317140000_task03_source_document_pipeline.sql
+supabase/migrations/20260317160000_task04_hellodata_conflicts.sql
+supabase/migrations/20260317170000_task05_grants_schema_reload.sql
+supabase/migrations/20260317180000_fix_org_select_rls_for_returning.sql
+supabase/migrations/20260317190000_task06_mls_geocode_photos.sql
+supabase/migrations/20260317200000_task08_weekly_reporting.sql
+supabase/migrations/20260317210000_task09_narrative_metadata.sql
+supabase/migrations/20260318200000_task14b_idempotency_keys.sql
+supabase/migrations/20260319200000_task15_google_drive.sql
+```
+
+Helper (requires `DATABASE_URL` / `SUPABASE_DB_URL` locally):
 
 ```bash
-# With Supabase CLI logged into the project:
-npx supabase db push
-# or paste/run:
-# supabase/migrations/20260317120000_phase1_foundation.sql
-# in the Supabase SQL editor.
+npm run task05:migrate
 ```
 
-4. Confirm Auth is enabled and create a staff user.
-5. Create an organization row (authenticated insert auto-adds the creator as `owner` via trigger).
-6. Restart `npm run dev` and call authenticated APIs (session cookies via Supabase Auth).
+Do **not** reset the remote database. Do **not** apply migrations without authorization.
 
-### Storage
+Private storage buckets (created by migrations): `source-documents`, `report-photos`, `generated-reports`.
 
-Migration creates private buckets:
+## Claude narrative
 
-- `source-documents`
-- `report-photos`
-- `generated-reports`
+1. Create an Anthropic API key owned by the PKL / AccellionX organization.  
+2. Set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in server env.  
+3. Generate / edit / Approve on Pricing & Reports. Approve locks an immutable PDF snapshot.
 
-Object paths must start with `{organization_id}/…` so RLS can authorize access.
+Without a key, staff still get a deterministic draft they can edit and approve.
 
-### Local verification checklist
+## Google Drive OAuth
 
-- [ ] `GET /api/health` → `mode: "live"` when env is set  
-- [ ] Unauthenticated `POST /api/properties` → `401`  
-- [ ] Authenticated user **outside** an org cannot read that org’s properties (`403` / empty via RLS)  
-- [ ] Demo UI still loads without env vars and keeps Veterans localStorage state  
+1. Google Cloud project with Drive API enabled.  
+2. OAuth Desktop client; redirect `http://localhost:53682/oauth2callback`.  
+3. Run:
 
-Live DB connectivity is **not** claimed in CI without credentials.
-
-## Demo journey (unchanged)
-
-1. **Portfolio** → featured 30 Veterans Memorial Parkway  
-2. **Property** → available units & amenities  
-3. **Comparables** → nine 1BR comps from the source report  
-4. **Pricing** → interactive rent adjustments + charts  
-5. **Generate PDF** → branded downloadable pricing analysis  
-6. **Report history / scheduling** → localStorage-backed demo state  
-
-## Sample vs live data
-
-| Area | Behavior |
-|------|----------|
-| Portfolio seed / Veterans fixture | Demo UI only (`src/data/*`, `src/store/demo-store.ts`) |
-| `/api/properties`, `/api/reports`, … | Live mode + auth only; no seed fallback |
-| CSV / Excel upload page | Still client-side demo parsing |
-| PDF upload page | Still simulated extraction |
-| Phase 1 schema / RLS / calc stubs | `supabase/migrations`, `src/domain`, `src/lib/calculations` |
-
-## Project structure
-
-```
-src/
-  app/                 # App Router pages + /api handlers
-  components/          # UI, layout, charts
-  data/                # Demo types + Veterans/portfolio seed
-  domain/              # Live-mode domain types, Zod schemas, status rules
-  lib/
-    supabase/          # Browser/server/admin clients + env/mode
-    auth/              # Session + org authorization helpers
-    api/               # Response/error/parse helpers
-    calculations/      # Pure calc interfaces (formulas pending)
-    privacy/           # Client-report PII guards
-  store/               # Zustand demo store
-  proxy.ts             # Supabase session refresh (live mode)
-supabase/
-  migrations/          # SQL foundation + RLS + storage
-docs/phase1/           # Audit + task reports
-tests/unit/            # Vitest coverage for foundation rules
+```bash
+GOOGLE_DRIVE_CLIENT_ID=... GOOGLE_DRIVE_CLIENT_SECRET=... node scripts/google-drive-oauth-setup.mjs
 ```
 
-## Phase 1 docs
+4. Store the refresh token as `GOOGLE_DRIVE_REFRESH_TOKEN` in server env only.  
+5. Prefer a dedicated PKL Google account that owns the reports root folder.  
+6. In the product: property → Google Drive backup → create/link folder; PDF workspace → Save to Google Drive after completion.
 
-- `docs/phase1/EXISTING_CODEBASE_AUDIT.md`
-- `docs/phase1/TASK_02_FOUNDATION_REPORT.md`
+## Google Geocoding
 
-## Vercel
+1. Enable Geocoding API on a billed GCP project.  
+2. Set `GOOGLE_GEOCODING_API_KEY` server-side.  
+3. Without billing/key, MLS distance fields remain unavailable (no invented miles).
 
-Demo deploys without env vars. For live mode, set the Supabase env vars in the Vercel project (service role as a **server** secret only).
+## Architecture (overview)
+
+```
+src/app/                 # App Router pages + /api
+src/components/          # UI (live property, PDF, Drive, photos, …)
+src/domain/              # Types, Zod schemas, lifecycle rules
+src/lib/
+  supabase/ auth/ api/   # Clients, session, envelopes
+  extraction/            # Rentometer, HelloData, MLS, weekly parsers
+  reports/ pdf/          # Assembly, narrative, PDF render
+  google-drive/          # Backup + naming + content identity
+  ui/                    # Staff-facing labels and error mapping
+supabase/migrations/     # Phase 1 schema + RLS + storage
+tests/                   # Vitest (synthetic fixtures committed)
+scripts/                 # Local engineering e2e (env-gated credentials)
+docs/phase1/             # Task reports and readiness docs
+```
+
+Report lifecycle: `in_progress` → `waiting_on_review` → `sent` → `saved_to_drive`.
+
+## Confidential data policy
+
+- **Do not commit** `.env`, OAuth tokens, client PDFs/XLSX/photos, `tmp/` evidence, or database dumps.  
+- Synthetic fixtures under `tests/fixtures/` are safe and required for CI.  
+- Real client source packages stay on the local machine; point scripts with `PKL_CLIENT_SOURCE_DIR`.  
+- Staff-facing UI never shows infrastructure jargon (see `AGENTS.md` content standards).
+
+## Production deployment checklist (not authorized yet)
+
+- [ ] Repository is **private**  
+- [ ] Secrets only in host env (never in git)  
+- [ ] Service role / Drive / Anthropic keys are org-owned  
+- [ ] Migrations reconciled on target project  
+- [ ] `PKL_ALLOW_DEMO_MODE` unset  
+- [ ] Auth users provisioned for PKL staff  
+- [ ] Google Drive root owned by PKL account  
+- [ ] Explicit written authorization to deploy  
+
+## License / confidentiality
+
+Private AccellionX repository. Client source materials and credentials are confidential and are not part of the public surface of this project.

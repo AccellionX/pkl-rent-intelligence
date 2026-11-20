@@ -1,0 +1,10 @@
+address,distance (mi),price,size (sqft),$/sqft,bedrooms,baths,property type,list date,outlier
+"100 Example St, Sample City, RI 02900, USA",0,2000,900,2.22,2,1ba,Apartment,10/27/2026,FALSE
+"200 Demo Ave, Sample City, RI 02901, USA",0.91,"$2,480",1040,2.38,2,1ba,apartment,10/27/2026,FALSE
+
+"300 Test Rd #1, Sample City, RI 02902, USA",1.99,1850,800,2.31,2,1ba,Apartment,10/27/2026,FALSE
+"300 Test Rd #2, Sample City, RI 02902, USA",1.99,1850,900,2.06,2,1ba,Apartment,09/15/2026,FALSE
+"400 Blank Sqft Ln, Sample City, RI 02903, USA",2.11,1825,, ,2,1ba,Apartment,10/27/2026,FALSE
+"500 Duplex Ct, Sample City, RI 02904, USA",2.43,2090,812,2.57,2,1ba,Apartment,10/27/2026,FALSE
+"500 Duplex Ct, Sample City, RI 02904, USA",2.43,2110,858,2.46,2,1ba,Apartment,10/27/2026,FALSE
+"600 Tiny Sqft Way, Sample City, RI 02905, USA",2.91,2215,92,24.08,2,1ba,Apartment,08/01/2026,FALSE

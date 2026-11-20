@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
+/blob-report
 
 # next.js
 /.next/
@@ -19,10 +22,13 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+*.p12
+*.key
 
 # debug
 npm-debug.log*
@@ -30,13 +36,70 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — never commit secrets (keep .env.example tracked)
+.env
+.env.*
 !.env.example
 
-# vercel
+# OAuth / cloud credential dumps
+**/credentials*.json
+**/client_secret*.json
+**/*-service-account*.json
+**/google-oauth*.json
+**/token.json
+
+# Supabase CLI local link/cache (may contain pooler URLs / project refs)
+supabase/.temp/
+supabase/.branches/
+
+# Local engineering evidence (screenshots, PDFs, browser dumps)
+/tmp/
+/tmp/**
+
+# Generated reports / local PDF outputs
+/generated/
+/exports/
+*.local.pdf
+
+# Database dumps
+*.sql.gz
+*.dump
+*.backup
+
+# Client confidential source packages (keep local; do not commit)
+# Synthetic fixtures under tests/fixtures/ remain tracked.
+/references/**
+!/references/.gitkeep
+/client-sources/
+/client-data/
+
+# Common confidential media (local only; fixtures under tests/ are allowed)
+/*.pdf
+/*.docx
+/*.xlsx
+/*.csv
+!/public/samples/**
+!/tests/fixtures/**
+
+# Vercel
 .vercel
 
-# typescript
+# typescript / caches
 *.tsbuildinfo
 next-env.d.ts
+.eslintcache
+.turbo
+.cache
+
+# editor
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*~
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride

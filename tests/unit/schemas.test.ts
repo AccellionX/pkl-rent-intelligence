@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   createPropertySchema,
   createReportRunSchema,
+  createSubjectUnitSchema,
   createUnitTypeSchema,
+  photoCropMetadataSchema,
   transitionReportRunSchema,
+  updatePhotoSchema,
 } from "@/domain/schemas";
 
 describe("domain schemas", () => {
@@ -52,5 +55,36 @@ describe("domain schemas", () => {
     expect(
       transitionReportRunSchema.parse({ toStatus: "waiting_on_review" }),
     ).toEqual({ toStatus: "waiting_on_review" });
+  });
+
+  it("validates subject unit create payloads", () => {
+    expect(
+      createSubjectUnitSchema.parse({
+        unitTypeId: "11111111-1111-4111-8111-111111111111",
+        unitNumber: "7",
+        sqft: 900,
+        askingRent: 2000,
+        status: "available",
+        availableDate: "2026-11-20",
+      }),
+    ).toMatchObject({ unitNumber: "7", status: "available" });
+  });
+
+  it("validates 3:2 photo crop metadata", () => {
+    expect(
+      photoCropMetadataSchema.parse({
+        aspect: "3:2",
+        x: 0.1,
+        y: 0.05,
+        width: 0.8,
+        height: 0.53,
+      }),
+    ).toMatchObject({ aspect: "3:2", x: 0.1 });
+    expect(
+      updatePhotoSchema.parse({
+        sortOrder: 2,
+        cropMetadata: { aspect: "3:2", x: 0, y: 0, width: 1, height: 0.666 },
+      }),
+    ).toMatchObject({ sortOrder: 2 });
   });
 });

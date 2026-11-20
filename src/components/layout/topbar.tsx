@@ -1,8 +1,7 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -35,20 +34,6 @@ export function Topbar({ title, subtitle }: { title: string; subtitle?: string }
               className="pl-9"
             />
           </form>
-          <Badge variant="gold" className="hidden sm:inline-flex">
-            Sample data
-          </Badge>
-          <button
-            type="button"
-            className="relative rounded-md border border-border bg-white p-2 text-ink-muted hover:bg-surface-muted"
-            aria-label="Notifications"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gold" />
-          </button>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-xs font-semibold text-white">
-            RD
-          </div>
         </div>
       </div>
     </header>

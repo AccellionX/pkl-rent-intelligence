@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { assertSameOrganization } from "@/lib/auth/authorize";
 import {
+  configurationError,
   demoModeError,
   forbiddenError,
   unauthorizedError,
 } from "@/lib/api/errors";
-import { getAppMode } from "@/lib/supabase/env";
 
 describe("authorization boundaries", () => {
   it("flags cross-organization access", () => {
@@ -33,9 +33,16 @@ describe("authorization boundaries", () => {
     expect(forbiddenError().status).toBe(403);
     expect(demoModeError().code).toBe("demo_mode");
     expect(demoModeError().status).toBe(503);
+    expect(configurationError().code).toBe("configuration_error");
+    expect(configurationError().status).toBe(503);
   });
 
-  it("defaults to demo mode without Supabase env", () => {
-    expect(getAppMode()).toBe("demo");
+  it("defaults to unconfigured without Supabase env (no silent demo)", async () => {
+    vi.resetModules();
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.PKL_ALLOW_DEMO_MODE;
+    const { getAppMode } = await import("@/lib/supabase/env");
+    expect(getAppMode()).toBe("unconfigured");
   });
 });

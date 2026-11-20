@@ -70,7 +70,47 @@ create type public.subject_unit_status as enum (
 );
 
 -- ---------------------------------------------------------------------------
+-- Helper: updated_at trigger (no table dependency)
+-- ---------------------------------------------------------------------------
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Core tenancy
+-- ---------------------------------------------------------------------------
+
+create table public.organizations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint organizations_slug_format check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$')
+);
+
+create table public.organization_members (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  role public.org_member_role not null default 'member',
+  created_at timestamptz not null default timezone('utc', now()),
+  unique (organization_id, user_id)
+);
+
+create index organization_members_user_id_idx on public.organization_members (user_id);
+create index organization_members_org_id_idx on public.organization_members (organization_id);
+
+-- ---------------------------------------------------------------------------
 -- Helper: membership check (security definer for RLS)
+-- Must follow organization_members — SQL-language functions validate relations at create.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.is_org_member(p_org_id uuid)
@@ -110,40 +150,23 @@ grant execute on function public.is_org_member(uuid) to authenticated;
 revoke all on function public.is_org_admin(uuid) from public;
 grant execute on function public.is_org_admin(uuid) to authenticated;
 
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
+-- True if org has any member row (bypasses RLS; used by organizations_select).
+create or replace function public.org_has_any_member(p_org_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
 as $$
-begin
-  new.updated_at = timezone('utc', now());
-  return new;
-end;
+  select exists (
+    select 1
+    from public.organization_members m
+    where m.organization_id = p_org_id
+  );
 $$;
 
--- ---------------------------------------------------------------------------
--- Core tenancy
--- ---------------------------------------------------------------------------
-
-create table public.organizations (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  slug text not null unique,
-  created_at timestamptz not null default timezone('utc', now()),
-  updated_at timestamptz not null default timezone('utc', now()),
-  constraint organizations_slug_format check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$')
-);
-
-create table public.organization_members (
-  id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null references public.organizations (id) on delete cascade,
-  user_id uuid not null references auth.users (id) on delete cascade,
-  role public.org_member_role not null default 'member',
-  created_at timestamptz not null default timezone('utc', now()),
-  unique (organization_id, user_id)
-);
-
-create index organization_members_user_id_idx on public.organization_members (user_id);
-create index organization_members_org_id_idx on public.organization_members (organization_id);
+revoke all on function public.org_has_any_member(uuid) from public;
+grant execute on function public.org_has_any_member(uuid) to authenticated;
 
 -- Bootstrap: authenticated creator becomes organization owner.
 create or replace function public.handle_organization_created()
@@ -162,6 +185,9 @@ begin
 end;
 $$;
 
+-- AFTER INSERT: membership row needs organizations.id to exist (FK).
+-- Pair with organizations_select allowing "no members yet" so PostgREST RETURNING works
+-- (RETURNING/SELECT RLS runs before AFTER triggers).
 create trigger organizations_add_creator_as_owner
   after insert on public.organizations
   for each row execute function public.handle_organization_created();
@@ -584,7 +610,13 @@ alter table public.weekly_metrics enable row level security;
 -- Organizations
 create policy organizations_select on public.organizations
   for select to authenticated
-  using (public.is_org_member(id));
+  using (
+    public.is_org_member(id)
+    -- PostgREST Prefer:return=representation evaluates RETURNING before AFTER INSERT
+    -- triggers; allow the inserting statement to read the row until membership exists.
+    -- Must use security-definer helper — a raw NOT EXISTS is RLS-filtered and leaks.
+    or not public.org_has_any_member(id)
+  );
 
 create policy organizations_insert on public.organizations
   for insert to authenticated

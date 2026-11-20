@@ -9,6 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // server-only throws in non-RSC contexts; empty stub for Node unit tests.
+      "server-only": path.resolve(__dirname, "./tests/shims/server-only.ts"),
     },
   },
 });
+

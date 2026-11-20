@@ -12,9 +12,18 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "task05:probe": "node scripts/task05-live-probe.mjs",
+    "task05:migrate": "node scripts/task05-apply-migrations.mjs",
+    "task05:e2e": "node scripts/task05-live-e2e.mjs",
+    "task07:e2e": "node scripts/task07-mls-live-e2e.mjs",
+    "task08:e2e": "node scripts/task08-weekly-live-e2e.mjs",
+    "task09:e2e": "node scripts/task09-narrative-live-e2e.mjs",
+    "task10:e2e": "node scripts/task10-pdf-live-e2e.mjs",
+    "task10a:e2e": "node scripts/task10a-855-reconcile.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@radix-ui/react-avatar": "^1.3.1",
     "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-dialog": "^1.3.1",
@@ -35,6 +44,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "googleapis": "^161.0.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.9",
     "lucide-react": "^1.71.0",
@@ -46,6 +56,7 @@
     "server-only": "^0.0.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
+    "unpdf": "^1.9.1",
     "xlsx": "^0.18.5",
     "zod": "^4.6.7",
     "zustand": "^5.1.0"
@@ -58,6 +69,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "playwright": "^1.56.1",
     "tailwindcss": "4.3.3",
     "typescript": "^5",
     "vitest": "^3.2.4"

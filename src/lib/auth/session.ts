@@ -1,8 +1,12 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Database } from "@/domain/database.types";
 import type { AuthUserContext } from "@/domain/types";
-import { demoModeError, unauthorizedError } from "@/lib/api/errors";
-import { isLiveMode } from "@/lib/supabase/env";
+import {
+  configurationError,
+  demoModeError,
+  unauthorizedError,
+} from "@/lib/api/errors";
+import { getAppMode, isLiveMode } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AuthedSupabase = {
@@ -19,17 +23,22 @@ export function toAuthUser(user: User): AuthUserContext {
 
 /**
  * Resolves the authenticated user session for API routes.
- * Demo mode ⇒ 503 demo_mode (never silently serves seed data).
- * Live mode without session ⇒ 401.
+ * - unconfigured ⇒ 503 configuration_error (never sample data)
+ * - explicit demo ⇒ 503 demo_mode
+ * - live without session ⇒ 401
  */
 export async function requireAuth(): Promise<AuthedSupabase> {
-  if (!isLiveMode()) {
+  const mode = getAppMode();
+  if (mode === "unconfigured") {
+    throw configurationError();
+  }
+  if (mode === "demo" || !isLiveMode()) {
     throw demoModeError();
   }
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
-    throw demoModeError();
+    throw configurationError();
   }
 
   const { data, error } = await supabase.auth.getUser();

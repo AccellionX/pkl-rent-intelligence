@@ -85,9 +85,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const { supabase, user } = await requireAuth();
     await requirePropertyAccess(supabase, user, id);
 
-    const { error } = await supabase.from("properties").delete().eq("id", id);
+    // Cascade through append-only review_decisions via security-definer RPC.
+    // Direct DELETE on properties fails when review history exists (P0001).
+    const { error } = await supabase.rpc("delete_property_cascade", {
+      p_property_id: id,
+    });
     if (error) {
-      throw validationError("Failed to delete property", error.message);
+      throw validationError("Could not delete property", error.message);
     }
 
     return jsonOk({ deleted: true, id });

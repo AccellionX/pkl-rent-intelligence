@@ -3,7 +3,8 @@
  * Kept separate from src/data/types.ts so the Veterans demo UI remains unchanged.
  */
 
-export type AppMode = "demo" | "live";
+/** live = Supabase configured; demo = explicit PKL_ALLOW_DEMO_MODE only; unconfigured = missing env (no sample fallback). */
+export type AppMode = "demo" | "live" | "unconfigured";
 
 export type OrgMemberRole = "owner" | "admin" | "member";
 
@@ -88,6 +89,8 @@ export interface Property {
   amenities: string[];
   external_links: PropertyExternalLinks;
   drive_folder_id: string | null;
+  drive_folder_name?: string | null;
+  drive_folder_verified_at?: string | null;
   created_at: string;
   updated_at: string;
 }

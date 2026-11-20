@@ -1,6 +1,7 @@
 import { createReportRunSchema } from "@/domain/schemas";
 import { requirePropertyAccess } from "@/lib/auth/authorize";
 import { requireAuth } from "@/lib/auth/session";
+import { runIdempotent } from "@/lib/api/idempotency";
 import { parseJsonBody } from "@/lib/api/parse";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { notFoundError, validationError } from "@/lib/api/errors";
@@ -52,28 +53,39 @@ export async function POST(request: Request, context: RouteContext) {
       throw notFoundError("Unit type not found on this property");
     }
 
-    const { data, error } = await supabase
-      .from("report_runs")
-      .insert({
-        organization_id: access.organizationId,
-        property_id: propertyId,
-        unit_type_id: body.unitTypeId,
-        title: body.title,
-        period_start: body.periodStart,
-        period_end: body.periodEnd,
-        prepared_by: body.preparedBy ?? null,
-        notes: body.notes ?? null,
-        created_by: user.id,
-        status: "in_progress",
-      })
-      .select("*")
-      .single();
+    const result = await runIdempotent({
+      request,
+      organizationId: access.organizationId,
+      userId: user.id,
+      route: `POST /api/properties/${propertyId}/reports`,
+      supabase,
+      execute: async () => {
+        const { data, error } = await supabase
+          .from("report_runs")
+          .insert({
+            organization_id: access.organizationId,
+            property_id: propertyId,
+            unit_type_id: body.unitTypeId,
+            title: body.title,
+            period_start: body.periodStart,
+            period_end: body.periodEnd,
+            prepared_by: body.preparedBy ?? null,
+            notes: body.notes ?? null,
+            created_by: user.id,
+            status: "in_progress",
+          })
+          .select("*")
+          .single();
 
-    if (error) {
-      throw validationError("Failed to create report run", error.message);
-    }
+        if (error) {
+          throw validationError("Failed to create report run", error.message);
+        }
 
-    return jsonOk({ report: data }, { status: 201 });
+        return { data: { report: data }, status: 201 };
+      },
+    });
+
+    return jsonOk(result.data, { status: result.status });
   } catch (error) {
     return jsonError(error);
   }

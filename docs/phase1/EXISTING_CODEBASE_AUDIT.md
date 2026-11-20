@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-11-17  
 **Deployed reference (UI only):** https://pkl-rent-intelligence.vercel.app/  
-**Repo inspected:** `/Users/mushi/Desktop/pkl-rent-intelligence`  
+**Repo inspected:** `<REPO_ROOT>`  
 **Mode:** Audit only — no code changes, installs, or deployments performed.
 
 ### Specification authority used for this audit

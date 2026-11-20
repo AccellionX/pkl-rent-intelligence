@@ -27,6 +27,8 @@ export const createPropertySchema = z.object({
   unitCount: z.number().int().min(0).max(100000).optional().nullable(),
   amenities: z.array(z.string().trim().min(1)).default([]),
   externalLinks: propertyExternalLinksSchema.default({}),
+  /** When true, create even if a same-org normalized address already exists. */
+  confirmDuplicateAddress: z.boolean().optional().default(false),
 });
 
 export const updatePropertySchema = createPropertySchema
@@ -84,6 +86,65 @@ export const transitionReportRunSchema = z.object({
   toStatus: reportRunStatusSchema,
 });
 
+export const setOrgDriveRootSchema = z
+  .object({
+    /** Paste an existing app-accessible folder link/id (drive.file must own it). */
+    folderIdOrUrl: z.string().trim().min(5).max(500).optional(),
+    /** Create a new reports root under My Drive via the connected account. */
+    create: z.boolean().optional().default(false),
+    folderName: z.string().trim().min(2).max(180).optional(),
+  })
+  .refine((v) => Boolean(v.create) || Boolean(v.folderIdOrUrl?.trim()), {
+    message: "Provide a folder link or choose create.",
+  });
+
+export const setPropertyDriveFolderSchema = z.object({
+  folderIdOrUrl: z.string().trim().min(5).max(500),
+});
+
+export const createPropertyDriveFolderSchema = z.object({
+  create: z.literal(true),
+});
+
 export const listPropertiesQuerySchema = z.object({
   organizationId: uuidSchema,
 });
+
+export const subjectUnitStatusSchema = z.enum([
+  "available",
+  "pending",
+  "leased",
+  "offline",
+]);
+
+export const createSubjectUnitSchema = z.object({
+  unitTypeId: uuidSchema,
+  unitNumber: z.string().trim().min(1).max(50),
+  sqft: z.number().int().positive().optional().nullable(),
+  askingRent: z.number().min(0).optional().nullable(),
+  marketRent: z.number().min(0).optional().nullable(),
+  status: subjectUnitStatusSchema.default("available"),
+  availableDate: z.string().date().optional().nullable(),
+  floor: z.number().int().min(0).max(200).optional().nullable(),
+  notes: z.string().trim().max(4000).optional().nullable(),
+});
+
+export const updateSubjectUnitSchema = createSubjectUnitSchema.partial().extend({
+  unitTypeId: uuidSchema.optional(),
+});
+
+export const photoCropMetadataSchema = z.object({
+  aspect: z.literal("3:2").default("3:2"),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().min(0.01).max(1),
+  height: z.number().min(0.01).max(1),
+});
+
+export const updatePhotoSchema = z.object({
+  sortOrder: z.number().int().min(0).optional(),
+  altText: z.string().trim().max(500).optional().nullable(),
+  cropMetadata: photoCropMetadataSchema.optional().nullable(),
+  comparablePropertyId: uuidSchema.optional().nullable(),
+});
+

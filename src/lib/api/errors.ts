@@ -16,7 +16,16 @@ export function demoModeError() {
   return new ApiError(
     503,
     "demo_mode",
-    "Supabase is not configured. The UI remains in explicit demo mode; live API data is unavailable.",
+    "This action isn’t available right now. Please contact your administrator.",
+  );
+}
+
+export function configurationError(message?: string) {
+  return new ApiError(
+    503,
+    "configuration_error",
+    message ??
+      "The application isn’t fully set up. Please contact your administrator.",
   );
 }
 
