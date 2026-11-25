@@ -7,12 +7,15 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  pending = false,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** Shows a spinner on the action button while a retry/load is in flight. */
+  pending?: boolean;
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white px-6 py-16 text-center">
@@ -22,7 +25,7 @@ export function EmptyState({
       <h3 className="text-base font-semibold text-navy">{title}</h3>
       <p className="mt-1 max-w-md text-sm text-ink-muted">{description}</p>
       {actionLabel && onAction && (
-        <Button className="mt-5" onClick={onAction}>
+        <Button className="mt-5" pending={pending} onClick={onAction}>
           {actionLabel}
         </Button>
       )}

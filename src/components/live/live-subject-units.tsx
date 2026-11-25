@@ -184,6 +184,7 @@ export function LiveSubjectUnitsManager({
   }
 
   async function remove(id: string, unitNumber: string) {
+    if (busy) return;
     if (!window.confirm(`Remove unit ${unitNumber}? This cannot be undone.`)) {
       return;
     }
@@ -229,7 +230,7 @@ export function LiveSubjectUnitsManager({
             size="sm"
             variant="ghost"
             className="text-rose-700 hover:bg-rose-50"
-            disabled={busy}
+            pending={busy}
             onClick={() => void remove(u.id, u.unitNumber)}
           >
             Remove

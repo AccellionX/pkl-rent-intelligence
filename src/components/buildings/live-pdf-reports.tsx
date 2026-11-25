@@ -911,6 +911,7 @@ function LivePdfReportsInner({ propertyId }: { propertyId: string }) {
                       className="mt-2"
                       size="sm"
                       variant="outline"
+                      pending={statusLoading}
                       onClick={() => setStatusTick((n) => n + 1)}
                     >
                       Retry status check
@@ -985,6 +986,7 @@ function LivePdfReportsInner({ propertyId }: { propertyId: string }) {
                       className="mt-2"
                       size="sm"
                       variant="ghost"
+                      pending={statusLoading}
                       onClick={() => setStatusTick((n) => n + 1)}
                     >
                       Refresh status

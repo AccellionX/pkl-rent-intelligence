@@ -6,12 +6,14 @@ import {
   Building2,
   FileText,
   LayoutDashboard,
+  Loader2,
   Settings2,
   Upload,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLiveOrg } from "@/hooks/use-live-org";
+import { usePendingAction } from "@/hooks/use-pending-action";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -27,15 +29,18 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const live = useLiveOrg();
+  const { pending, run } = usePendingAction();
 
   async function signOut() {
-    const supabase = createSupabaseBrowserClient();
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    toast.success("Signed out successfully.");
-    router.push("/login");
-    router.refresh();
+    await run(async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      toast.success("Signed out successfully.");
+      router.push("/login");
+      router.refresh();
+    });
   }
 
   return (
@@ -96,10 +101,16 @@ export function Sidebar() {
           {live.authenticated ? (
             <button
               type="button"
+              disabled={pending}
+              aria-busy={pending || undefined}
               onClick={() => void signOut()}
-              className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-gold hover:text-gold/80"
+              className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-gold hover:text-gold/80 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              {pending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <LogOut className="h-3.5 w-3.5" />
+              )}
               Sign out
             </button>
           ) : (

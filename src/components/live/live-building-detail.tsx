@@ -189,6 +189,7 @@ function LiveBuildingDetailInner({ propertyId }: { propertyId: string }) {
   }
 
   async function createUnitType() {
+    if (busy) return;
     if (!newUt.label.trim()) {
       toast.error("Enter a unit type name");
       return;
@@ -468,7 +469,7 @@ function LiveBuildingDetailInner({ propertyId }: { propertyId: string }) {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={busy}
+                  pending={busy}
                   onClick={() => void createUnitType()}
                 >
                   Add unit type

@@ -119,7 +119,7 @@ GOOGLE_GEOCODING_API_KEY=your_restricted_key
 
 - OAuth refresh-token + `drive.file` scope (`scripts/google-drive-oauth-setup.mjs`)
 - `access_type=offline` + `prompt=consent` for durable refresh tokens
-- Redirect: `http://localhost:53682/oauth2callback`
+- Redirect: `http://localhost:3000/oauth2callback`
 - Auto-backup after finalize/complete + manual retry
 - Duplicate prevention via `appProperties` fingerprint
 - Status `saved_to_drive` only after Drive confirms
@@ -141,7 +141,7 @@ GOOGLE_GEOCODING_API_KEY=your_restricted_key
    `https://www.googleapis.com/auth/drive.file`.
 3. For durable refresh tokens: publishing may be required for production users; for a dedicated PKL test account, keep consent in Testing and add that account as a test user. Use `prompt=consent` + `access_type=offline` (already in the setup script).
 4. Create **OAuth Desktop** (or Web) client; authorized redirect URI:  
-   `http://localhost:53682/oauth2callback`.
+   `http://localhost:3000/oauth2callback`.
 5. Run locally (do not commit output):
 
 ```bash

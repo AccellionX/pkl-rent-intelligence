@@ -118,7 +118,7 @@ No OAuth credentials; migration unapplied; no real upload performed. Mocked test
 ## Exact Google Cloud + env setup (live)
 
 1. Google Cloud project → enable **Google Drive API**
-2. OAuth consent + Desktop (or Web) client with redirect `http://localhost:53682/oauth2callback`
+2. OAuth consent + Desktop (or Web) client with redirect `http://localhost:3000/oauth2callback`
 3. Run:
 
 ```bash

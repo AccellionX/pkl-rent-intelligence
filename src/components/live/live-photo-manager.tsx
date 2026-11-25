@@ -41,6 +41,7 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyPhotoId, setBusyPhotoId] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<BatchProgressItem[]>([]);
   const [imgFailed, setImgFailed] = useState<Record<string, boolean>>({});
   const [cropTarget, setCropTarget] = useState<PhotoRow | null>(null);
@@ -53,9 +54,10 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
   const requestGen = useRef(0);
   const busyRef = useRef(false);
 
-  function setBusyLocked(next: boolean) {
+  function setBusyLocked(next: boolean, photoId?: string | null) {
     busyRef.current = next;
     setBusy(next);
+    setBusyPhotoId(next ? (photoId ?? null) : null);
   }
 
   const scopeQs = comparablePropertyId
@@ -269,7 +271,7 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
 
   async function saveCrop() {
     if (!cropTarget || !crop || busyRef.current) return;
-    setBusyLocked(true);
+    setBusyLocked(true, cropTarget.id);
     try {
       const res = await fetch(`/api/photos/${cropTarget.id}`, {
         method: "PATCH",
@@ -292,7 +294,7 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
     const idx = photos.findIndex((p) => p.id === photo.id);
     const swap = photos[idx + dir];
     if (!swap || busyRef.current) return;
-    setBusyLocked(true);
+    setBusyLocked(true, photo.id);
     try {
       await Promise.all([
         fetch(`/api/photos/${photo.id}`, {
@@ -317,7 +319,7 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
   async function remove(photo: PhotoRow) {
     if (!window.confirm("Remove this photo from the property?")) return;
     if (busyRef.current) return;
-    setBusyLocked(true);
+    setBusyLocked(true, photo.id);
     try {
       const res = await fetch(`/api/photos/${photo.id}`, { method: "DELETE" });
       const json = await res.json();
@@ -333,7 +335,7 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
 
   async function reuse(photo: PhotoRow) {
     if (busyRef.current) return;
-    setBusyLocked(true);
+    setBusyLocked(true, photo.id);
     try {
       const res = await fetch(`/api/properties/${propertyId}/photos/reuse`, {
         method: "POST",
@@ -356,7 +358,7 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
 
   async function replace(photo: PhotoRow, file: File) {
     if (busyRef.current) return;
-    setBusyLocked(true);
+    setBusyLocked(true, photo.id);
     try {
       await removeQuiet(photo);
       await postPhoto(file, "upload");
@@ -456,7 +458,13 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
         {listError ? (
           <div className="rounded-md border border-border bg-surface/50 p-3 text-sm">
             <p className="text-ink-muted">{listError}</p>
-            <Button className="mt-2" size="sm" variant="outline" onClick={() => load()}>
+            <Button
+              className="mt-2"
+              size="sm"
+              variant="outline"
+              pending={listLoading}
+              onClick={() => load()}
+            >
               Try again
             </Button>
           </div>
@@ -508,7 +516,8 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => load({ silent: true })}
+                        pending={listLoading}
+                        onClick={() => load()}
                       >
                         Reload preview
                       </Button>
@@ -526,7 +535,8 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busy || i === 0}
+                      pending={busyPhotoId === p.id}
+                      disabled={i === 0 || (busy && busyPhotoId !== p.id)}
                       onClick={() => void move(p, -1)}
                     >
                       Up
@@ -534,7 +544,10 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busy || i === photos.length - 1}
+                      pending={busyPhotoId === p.id}
+                      disabled={
+                        i === photos.length - 1 || (busy && busyPhotoId !== p.id)
+                      }
                       onClick={() => void move(p, 1)}
                     >
                       Down
@@ -550,16 +563,20 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busy}
+                      pending={busyPhotoId === p.id}
+                      disabled={busy && busyPhotoId !== p.id}
                       onClick={() => void reuse(p)}
                     >
                       Reuse
                     </Button>
-                    <label className="inline-flex">
+                    <label
+                      className={`inline-flex ${busy ? "pointer-events-none opacity-50" : ""}`}
+                    >
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
+                        disabled={busy}
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           if (f) void replace(p, f);
@@ -573,7 +590,8 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busy}
+                      pending={busyPhotoId === p.id}
+                      disabled={busy && busyPhotoId !== p.id}
                       onClick={() => void remove(p)}
                     >
                       Remove
@@ -657,7 +675,13 @@ export function LivePhotoManager({ propertyId, comparablePropertyId = null }: Pr
               </div>
             ) : null}
             <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="gold" disabled={busy || !crop} onClick={() => void saveCrop()}>
+              <Button
+                size="sm"
+                variant="gold"
+                pending={busy && busyPhotoId === cropTarget.id}
+                disabled={!crop || (busy && busyPhotoId !== cropTarget.id)}
+                onClick={() => void saveCrop()}
+              >
                 Save crop
               </Button>
               <Button

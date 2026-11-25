@@ -10,20 +10,24 @@ import { ModeGate } from "@/components/live/mode-gate";
 import { LiveDriveSettings } from "@/components/live/live-drive-settings";
 import { LiveOrgSwitcher } from "@/components/live/live-org-switcher";
 import { useLiveOrg } from "@/hooks/use-live-org";
+import { usePendingAction } from "@/hooks/use-pending-action";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 function SettingsInner() {
   const router = useRouter();
   const live = useLiveOrg();
+  const { pending, run } = usePendingAction();
 
   async function signOut() {
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    toast.success("Signed out successfully.");
-    router.push("/login");
-    router.refresh();
+    await run(async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) return;
+      await supabase.auth.signOut();
+      toast.success("Signed out successfully.");
+      router.push("/login");
+      router.refresh();
+    });
   }
 
   return (
@@ -64,7 +68,7 @@ function SettingsInner() {
                       onChange={live.setOrganizationId}
                     />
                   )}
-                  <Button variant="outline" onClick={() => void signOut()}>
+                  <Button variant="outline" pending={pending} onClick={() => void signOut()}>
                     Sign out
                   </Button>
                 </>

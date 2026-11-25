@@ -1,8 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  AlertCircle,
+  Check,
   FileSpreadsheet,
   FileText,
   Sparkles,
@@ -50,6 +52,13 @@ import {
   primaryReviewSurface,
   summarizePendingBySurface,
 } from "@/lib/uploads/review-routing";
+import {
+  DOCUMENT_SLOTS,
+  getDocumentSlot,
+  resolveSourceTypeForSlot,
+  summarizeSlotUploads,
+  type DocumentSlotId,
+} from "@/lib/uploads/document-slots";
 import { createId, sleep } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -80,9 +89,7 @@ function UploadContent() {
   const [processing, setProcessing] = useState(false);
   // Customer-facing upload is always live; ModeGate blocks unconfigured/demo.
   const appMode = "live" as const;
-  const [sourceType, setSourceType] = useState(
-    "rentometer_csv",
-  );
+  const [selectedSlotId, setSelectedSlotId] = useState<DocumentSlotId | null>(null);
   const [organizationId, setOrganizationId] = useState("");
   // Never default to the first org property — require URL or explicit selection.
   const [propertyId, setPropertyId] = useState(urlBuildingId);
@@ -97,6 +104,8 @@ function UploadContent() {
   const [matchTier, setMatchTier] = useState<"strongest" | "moderate" | "context">(
     "moderate",
   );
+  const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [liveConflicts, setLiveConflicts] = useState<
     Array<{
       id: string;
@@ -114,6 +123,7 @@ function UploadContent() {
     Array<{
       id: string;
       originalFilename: string;
+      sourceType: string;
       sourceTypeLabel: string;
       statusLabel: string;
       uploadedAt: string;
@@ -349,7 +359,14 @@ function UploadContent() {
       toast.error("Select a property before uploading");
       return;
     }
+    if (!selectedSlotId) {
+      toast.error("Choose which document type you are uploading");
+      return;
+    }
     if (processing) return;
+
+    const sourceType = resolveSourceTypeForSlot(selectedSlotId, file.name);
+    const slotLabel = getDocumentSlot(selectedSlotId).label;
 
     setProcessing(true);
     setProgress(15);
@@ -445,10 +462,22 @@ function UploadContent() {
         }
       }
 
-      toast.success("File uploaded", {
+      toast.success(`${slotLabel} uploaded`, {
         description:
-          "Saved for review later. You can keep uploading, or review now if you prefer.",
+          "Saved for review later. Choose the next document type, or continue when ready.",
       });
+
+      // Advance to the next missing slot so staff can keep going without re-picking.
+      const slotStatuses = summarizeSlotUploads({
+        documents: documentCenter,
+        reportRunId,
+      });
+      const nextMissing = DOCUMENT_SLOTS.find((slot) => {
+        if (slot.id === selectedSlotId) return false;
+        const status = slotStatuses.find((s) => s.slotId === slot.id);
+        return !status?.uploaded;
+      });
+      if (nextMissing) setSelectedSlotId(nextMissing.id);
     } catch (err) {
       console.error(err);
       setLiveStatus("failed");
@@ -474,6 +503,11 @@ function UploadContent() {
     decision: "accepted" | "rejected",
     tierOverride?: "strongest" | "moderate" | "context",
   ) {
+    if (reviewBusyId) {
+      toast.message("Still saving the previous decision — try again in a moment.");
+      return;
+    }
+    setReviewBusyId(extractionId);
     try {
       const response = await fetch(`/api/extractions/${extractionId}/review`, {
         method: "POST",
@@ -497,13 +531,19 @@ function UploadContent() {
             : e,
         ),
       );
-      toast.success(`Marked ${decision}`);
+      toast.success(decision === "accepted" ? "Accepted." : "Excluded.");
     } catch (err) {
       toast.error(toUserFacingError(err, "Review failed"));
+    } finally {
+      setReviewBusyId(null);
     }
   }
 
   async function resolveConflict(conflictId: string) {
+    if (reviewBusyId) {
+      toast.message("Still saving the previous decision — try again in a moment.");
+      return;
+    }
     const rent = Number(chosenRent);
     if (!Number.isFinite(rent) || rent <= 0) {
       toast.error("Enter a positive verified rent to resolve");
@@ -513,6 +553,7 @@ function UploadContent() {
       toast.error("Reviewer note is required");
       return;
     }
+    setReviewBusyId(conflictId);
     try {
       const response = await fetch(`/api/conflicts/${conflictId}/resolve`, {
         method: "POST",
@@ -533,6 +574,8 @@ function UploadContent() {
       toast.success("Conflict resolved — draft KPIs will exclude unresolved rows only");
     } catch (err) {
       toast.error(toUserFacingError(err, "Could not resolve conflict"));
+    } finally {
+      setReviewBusyId(null);
     }
   }
 
@@ -548,6 +591,26 @@ function UploadContent() {
     (e) =>
       e.review_status === "pending" && !isComparableCandidateFieldKey(e.field_key),
   );
+
+  const slotStatuses = useMemo(
+    () =>
+      summarizeSlotUploads({
+        documents: documentCenter,
+        reportRunId,
+      }),
+    [documentCenter, reportRunId],
+  );
+  const uploadedSlotCount = slotStatuses.filter((s) => s.uploaded).length;
+  const selectedSlot = selectedSlotId ? getDocumentSlot(selectedSlotId) : null;
+  const selectedSlotStatus = selectedSlotId
+    ? slotStatuses.find((s) => s.slotId === selectedSlotId) ?? null
+    : null;
+
+  useEffect(() => {
+    if (selectedSlotId || !propertyId) return;
+    const firstMissing = slotStatuses.find((s) => !s.uploaded)?.slotId ?? DOCUMENT_SLOTS[0]?.id;
+    if (firstMissing) setSelectedSlotId(firstMissing);
+  }, [propertyId, selectedSlotId, slotStatuses]);
 
   return (
     <div>
@@ -623,9 +686,11 @@ function UploadContent() {
             continueHint={
               documentCenter.some((d) => d.remainingReviewCount > 0)
                 ? "Uploads are saved. Review comparables next — you can finish accepting listings there."
-                : documentCenter.length > 0 || liveDocumentId
-                  ? "Documents are saved for this report. Continue when you are ready."
-                  : "Upload at least one document for this period, then continue."
+                : uploadedSlotCount >= DOCUMENT_SLOTS.length
+                  ? "All six document types are uploaded. Continue when you are ready."
+                  : uploadedSlotCount > 0 || liveDocumentId
+                    ? `${uploadedSlotCount} of ${DOCUMENT_SLOTS.length} document types uploaded. You can continue or finish the checklist.`
+                    : "Choose each document type below and upload the matching file, then continue."
             }
           />
         ) : null}
@@ -659,35 +724,17 @@ function UploadContent() {
           <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle>
-                {appMode === "live" ? "Upload source document" : "Upload comps or unit schedule"}
+                {appMode === "live" ? "Upload documents" : "Upload comps or unit schedule"}
               </CardTitle>
               <CardDescription>
                 {appMode === "live"
-                  ? "Upload your documents. We'll extract the available information for you to review."
+                  ? "Choose each document type, upload the matching file, and watch the checklist mark complete. This helps avoid missing or mislabeled sources."
                   : "Drop a PDF for simulated extraction, or CSV/Excel for real parsing"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {appMode === "live" ? (
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <div className="mb-2 text-sm font-medium">Source type</div>
-                    <Select value={sourceType} onValueChange={setSourceType}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rentometer_csv">Rentometer CSV</SelectItem>
-                        <SelectItem value="rentometer_xlsx">Rentometer Excel</SelectItem>
-                        <SelectItem value="rentometer_pdf">Rentometer PDF</SelectItem>
-                        <SelectItem value="hellodata_pdf">HelloData PDF</SelectItem>
-                        <SelectItem value="mls_ri_pdf">RI State-Wide MLS PDF</SelectItem>
-                        <SelectItem value="mls_ct_pdf">CT connectMLS PDF</SelectItem>
-                        <SelectItem value="zillow_xlsx">Zillow Listing Performance Excel</SelectItem>
-                        <SelectItem value="apartments_xlsx">Apartments.com Leads Excel</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div>
                     <div className="mb-2 text-sm font-medium">Organization</div>
                     <Input
@@ -851,46 +898,155 @@ function UploadContent() {
                 </div>
               )}
 
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragging(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) void handleFile(file);
-                }}
-                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
-                  dragging
-                    ? "border-gold bg-gold/10"
-                    : "border-border bg-surface/60 hover:border-gold/40"
-                }`}
-              >
-                <UploadCloud className="mb-3 h-8 w-8 text-navy" />
-                <div className="font-medium text-navy">Drop a file here</div>
-                <p className="mt-1 max-w-sm text-sm text-ink-muted">
-                  PDF · XLSX · CSV. Files are stored privately for your organization.
-                </p>
-                <label className="mt-4 cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".pdf,.xlsx,.xls,.csv"
-                    className="hidden"
-                    disabled={processing}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void handleFile(file);
-                      e.target.value = "";
-                    }}
-                  />
-                  <Button asChild variant="default" pending={processing}>
-                    <span>{processing ? "Uploading…" : "Browse files"}</span>
-                  </Button>
-                </label>
-              </div>
+              {appMode === "live" ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium text-navy">Document checklist</div>
+                      <p className="text-xs text-ink-muted">
+                        Select a type, then upload that file. Uploaded types stay checked so you can
+                        see what is still missing.
+                      </p>
+                    </div>
+                    <Badge variant={uploadedSlotCount === DOCUMENT_SLOTS.length ? "success" : "outline"}>
+                      {uploadedSlotCount} of {DOCUMENT_SLOTS.length} uploaded
+                    </Badge>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {DOCUMENT_SLOTS.map((slot) => {
+                      const status = slotStatuses.find((s) => s.slotId === slot.id);
+                      const selected = selectedSlotId === slot.id;
+                      const uploaded = Boolean(status?.uploaded);
+                      const failed = Boolean(status?.failed);
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          disabled={processing}
+                          onClick={() => setSelectedSlotId(slot.id)}
+                          className={`flex items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${
+                            selected
+                              ? "border-gold bg-gold/10"
+                              : uploaded
+                                ? "border-emerald-200 bg-emerald-50/60 hover:border-emerald-300"
+                                : failed
+                                  ? "border-rose-200 bg-rose-50/50 hover:border-rose-300"
+                                  : "border-border bg-white hover:border-gold/40"
+                          } disabled:cursor-not-allowed disabled:opacity-60`}
+                        >
+                          <span
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                              uploaded
+                                ? "bg-emerald-600 text-white"
+                                : failed
+                                  ? "bg-rose-600 text-white"
+                                  : selected
+                                    ? "border-2 border-gold bg-white"
+                                    : "border border-border bg-surface-muted/40"
+                            }`}
+                            aria-hidden
+                          >
+                            {uploaded ? (
+                              <Check className="h-3 w-3" />
+                            ) : failed ? (
+                              <AlertCircle className="h-3 w-3" />
+                            ) : null}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-navy">{slot.label}</span>
+                            <span className="mt-0.5 block text-xs text-ink-muted">
+                              {uploaded && status?.document
+                                ? status.document.originalFilename
+                                : failed && status?.document
+                                  ? `Upload failed · ${status.document.originalFilename}`
+                                  : slot.description}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {appMode === "live" && !selectedSlot ? (
+                <div className="rounded-xl border border-dashed border-border bg-surface/40 px-6 py-10 text-center">
+                  <UploadCloud className="mx-auto mb-3 h-8 w-8 text-ink-subtle" />
+                  <div className="font-medium text-navy">Select a document type above</div>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    The upload button appears after you choose which file you are adding.
+                  </p>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (selectedSlot || appMode !== "live") setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    if (appMode === "live" && !selectedSlot) {
+                      toast.error("Choose which document type you are uploading");
+                      return;
+                    }
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) void handleFile(file);
+                  }}
+                  className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
+                    dragging
+                      ? "border-gold bg-gold/10"
+                      : "border-border bg-surface/60 hover:border-gold/40"
+                  }`}
+                >
+                  <UploadCloud className="mb-3 h-8 w-8 text-navy" />
+                  <div className="font-medium text-navy">
+                    {selectedSlot
+                      ? selectedSlotStatus?.uploaded
+                        ? `Replace ${selectedSlot.label}`
+                        : `Upload ${selectedSlot.label}`
+                      : "Drop a file here"}
+                  </div>
+                  <p className="mt-1 max-w-sm text-sm text-ink-muted">
+                    {selectedSlot
+                      ? `${selectedSlot.description}. Only this document type will be saved.`
+                      : "PDF · XLSX · CSV. Files are stored privately for your organization."}
+                  </p>
+                  {selectedSlotStatus?.uploaded && selectedSlotStatus.document ? (
+                    <p className="mt-2 text-xs text-emerald-800">
+                      Current file: {selectedSlotStatus.document.originalFilename}
+                    </p>
+                  ) : null}
+                  <div className="mt-4">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={selectedSlot?.accept ?? ".pdf,.xlsx,.xls,.csv"}
+                      className="hidden"
+                      disabled={processing || (appMode === "live" && !selectedSlot)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleFile(file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="gold"
+                      pending={processing}
+                      disabled={appMode === "live" && !selectedSlot}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {selectedSlot
+                        ? selectedSlotStatus?.uploaded
+                          ? `Replace ${selectedSlot.label}`
+                          : `Upload ${selectedSlot.label}`
+                        : "Browse files"}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {processing && (
                 <div className="space-y-2 rounded-lg border border-border p-4">
@@ -1114,7 +1270,11 @@ function UploadContent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    disabled={e.review_status === "accepted"}
+                                    pending={reviewBusyId === e.id}
+                                    disabled={
+                                      e.review_status === "accepted" ||
+                                      (reviewBusyId != null && reviewBusyId !== e.id)
+                                    }
                                     onClick={() => void submitReview(e.id, "accepted")}
                                   >
                                     Accept
@@ -1122,7 +1282,11 @@ function UploadContent() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    disabled={e.review_status === "rejected"}
+                                    pending={reviewBusyId === e.id}
+                                    disabled={
+                                      e.review_status === "rejected" ||
+                                      (reviewBusyId != null && reviewBusyId !== e.id)
+                                    }
                                     onClick={() => void submitReview(e.id, "rejected")}
                                   >
                                     Exclude
@@ -1161,7 +1325,12 @@ function UploadContent() {
                                       {rightRent ?? "—"}
                                     </div>
                                   </div>
-                                  <Button size="sm" onClick={() => void resolveConflict(c.id)}>
+                                  <Button
+                                    size="sm"
+                                    pending={reviewBusyId === c.id}
+                                    disabled={reviewBusyId != null && reviewBusyId !== c.id}
+                                    onClick={() => void resolveConflict(c.id)}
+                                  >
                                     Resolve
                                   </Button>
                                 </div>

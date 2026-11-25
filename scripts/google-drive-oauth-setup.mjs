@@ -19,7 +19,7 @@ import { URL } from "node:url";
 
 const CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID?.trim();
 const CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET?.trim();
-const PORT = 53682;
+const PORT = 3000;
 const REDIRECT = `http://localhost:${PORT}/oauth2callback`;
 const SCOPE = encodeURIComponent(
   process.env.GOOGLE_DRIVE_SCOPES?.trim() ||

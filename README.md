@@ -108,7 +108,7 @@ Without a key, staff still get a deterministic draft they can edit and approve.
 ## Google Drive OAuth
 
 1. Google Cloud project with Drive API enabled.  
-2. OAuth Desktop client; redirect `http://localhost:53682/oauth2callback`.  
+2. OAuth Desktop client; redirect `http://localhost:3000/oauth2callback`.  
 3. Run:
 
 ```bash
