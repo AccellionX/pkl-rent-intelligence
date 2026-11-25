@@ -4,7 +4,7 @@ import { buildReportHtml } from "./html-template";
 
 /**
  * Optional Playwright HTML→PDF path.
- * Not assumed available on Vercel. Prefer Railway worker in production:
+ * Not assumed available on the default web service. Prefer a Railway worker in production:
  * see docs in TASK_10_PDF_GENERATION_REPORT.md.
  *
  * Enable locally with PDF_RENDERER=playwright and playwright installed.

@@ -81,8 +81,9 @@ supabase/.branches/
 !/public/samples/**
 !/tests/fixtures/**
 
-# Vercel
+# Local deploy tooling leftovers
 .vercel
+.railway
 
 # typescript / caches
 *.tsbuildinfo

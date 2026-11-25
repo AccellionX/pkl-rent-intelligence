@@ -54,7 +54,7 @@ These rules apply to **all** UI, API error envelopes that reach the browser, toa
 
 ### Never show customers
 
-4. Do **not** surface: Supabase, PostgreSQL/PostgREST, Vercel, schemas, API endpoints, API keys, access tokens, JWTs/sessions jargon, RLS, storage buckets, UUIDs/internal ids, environment variables, demo/live/sample/mock/seeded labels, or implementation notes.
+4. Do **not** surface: Supabase, PostgreSQL/PostgREST, Vercel, Railway, schemas, API endpoints, API keys, access tokens, JWTs/sessions jargon, RLS, storage buckets, UUIDs/internal ids, environment variables, demo/live/sample/mock/seeded labels, or implementation notes.
 5. Do **not** explain authentication infrastructure on the login page. Use: “Sign in to your account” / “Enter your email and password to continue.”
 6. Route all unexpected errors through `toUserFacingError` / `apiErrorMessage`. Map known failures accurately (credentials vs outage vs permission vs missing integration). Never show stack traces, HTTP status codes, SQL, or raw provider dumps.
 7. Keep underlying enums and security behavior unchanged; only labels and messages change. Report lifecycle values stay: `in_progress` → `waiting_on_review` → `sent` → `saved_to_drive`.

@@ -14,7 +14,7 @@ export type RenderedReportPdf = {
 
 /**
  * Render a branded PDF from the canonical assembly payload.
- * Default engine: jsPDF (Vercel/Railway compatible, no browser binaries).
+ * Default engine: jsPDF (Railway-compatible, no browser binaries).
  * Optional: PDF_RENDERER=playwright when Chromium is available (local/Railway worker).
  */
 export async function renderCanonicalReportPdf(opts: {

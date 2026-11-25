@@ -214,7 +214,7 @@ export function DemoSchedulePage() {
             Weekly schedules mirror the listing-update cadence from the source report.
             Twice-monthly schedules represent deeper pricing refreshes. Enabling a schedule
             only updates local state — no background jobs or outbound email run in this
-            Vercel-ready static demo.
+            static demo only.
           </CardContent>
         </Card>
       </div>

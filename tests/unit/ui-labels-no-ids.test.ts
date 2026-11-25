@@ -41,6 +41,7 @@ const FORBIDDEN_LABEL_PATTERNS = [
   /\bSupabase\b/,
   /\bPostgreSQL\b/,
   /\bVercel\b/,
+  /\bRailway\b/,
   /\bJWT\b/,
   /\bRLS\b/,
   /demo mode/i,
@@ -105,7 +106,7 @@ describe("customer UI — no internal ID labels or infrastructure jargon", () =>
 });
 
 describe("customer UI — scan live TSX for infrastructure provider names in string literals", () => {
-  it("flags unexpected Supabase/Vercel/JWT string literals in components and app pages", () => {
+  it("flags unexpected Supabase/Vercel/Railway/JWT string literals in components and app pages", () => {
     const dirs = [
       join(root, "components/live"),
       join(root, "components/buildings"),
@@ -114,7 +115,7 @@ describe("customer UI — scan live TSX for infrastructure provider names in str
     const hits: string[] = [];
     // User-facing string literals only — ignore import paths / identifiers.
     const forbidden =
-      /["'`][^"'`\n]*(?:\bSupabase\b|\bPostgreSQL\b|\bVercel\b|\bJWT\b|RLS policy|demo mode|live mode|sample data|NEXT_PUBLIC_SUPABASE)[^"'`\n]*["'`]/;
+      /["'`][^"'`\n]*(?:\bSupabase\b|\bPostgreSQL\b|\bVercel\b|\bRailway\b|\bJWT\b|RLS policy|demo mode|live mode|sample data|NEXT_PUBLIC_SUPABASE)[^"'`\n]*["'`]/;
 
     function walk(dir: string) {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {

@@ -59,6 +59,7 @@ describe("toUserFacingError", () => {
   it("does not leak infrastructure provider names", () => {
     expect(toUserFacingError("Supabase authentication failed")).not.toMatch(/Supabase/i);
     expect(toUserFacingError("Deploy on Vercel failed")).not.toMatch(/Vercel/i);
+    expect(toUserFacingError("Railway deploy failed")).not.toMatch(/Railway/i);
   });
 });
 

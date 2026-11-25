@@ -57,7 +57,7 @@ const TECHNICAL_PATTERNS: Array<{ re: RegExp; message: string }> = [
     message: "This action isn’t available right now. Please try again later.",
   },
   {
-    re: /configuration_error|not configured|SUPABASE|NEXT_PUBLIC_|SERVICE_ROLE|environment variable|Vercel|API key|access token/i,
+    re: /configuration_error|not configured|SUPABASE|NEXT_PUBLIC_|SERVICE_ROLE|environment variable|Vercel|Railway|API key|access token/i,
     message: "The application isn’t fully set up. Please contact your administrator.",
   },
   {
@@ -87,7 +87,7 @@ const TECHNICAL_PATTERNS: Array<{ re: RegExp; message: string }> = [
 ];
 
 const FORBIDDEN_TOKEN =
-  /\b(Supabase|PostgreSQL|Postgres|PostgREST|PGRST\d*|Vercel|JWT|RLS|UUID|NEXT_PUBLIC_[A-Z0-9_]+|SUPABASE_[A-Z0-9_]+|ANTHROPIC_[A-Z0-9_]+|SERVICE_ROLE|schema cache|Idempotency-Key|storage bucket|demo mode|live mode|sample data|mock data|seeded)\b/i;
+  /\b(Supabase|PostgreSQL|Postgres|PostgREST|PGRST\d*|Vercel|Railway|JWT|RLS|UUID|NEXT_PUBLIC_[A-Z0-9_]+|SUPABASE_[A-Z0-9_]+|ANTHROPIC_[A-Z0-9_]+|SERVICE_ROLE|schema cache|Idempotency-Key|storage bucket|demo mode|live mode|sample data|mock data|seeded)\b/i;
 
 export function toUserFacingError(
   error: unknown,

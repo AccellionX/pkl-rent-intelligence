@@ -16,7 +16,7 @@ This repository contains the **Phase 1** application: authenticated, org-scoped 
 | Contractual 855 numerical parity / client comparable decisions | Outstanding |
 | Google Geocoding billing for MLS distances | Outstanding |
 | Veterans gold PDF reference parity | Outstanding |
-| Production / Vercel deployment | Not authorized yet |
+| Production / Railway deployment | Connected — set `NEXT_PUBLIC_APP_URL` to the Railway public URL |
 
 See `docs/phase1/TASK_22_REPOSITORY_RELEASE_READINESS.md` and prior Phase 1 task reports under `docs/phase1/`.
 
@@ -69,6 +69,16 @@ Full variable list, required vs optional, and server-only vs browser-safe: **`.e
 | Local e2e only | `PKL_E2E_EMAIL`, `PKL_E2E_PASSWORD`, `PKL_CLIENT_SOURCE_DIR` | Never commit values |
 
 Demo fixtures activate only when `PKL_ALLOW_DEMO_MODE=true` (never on customer hosts).
+
+## Railway deployment
+
+This app is hosted on **Railway** (not Vercel).
+
+1. Connect the GitHub repo to a Railway service.
+2. Set the same variables from `.env.example` in Railway → Variables (never commit secrets).
+3. Set `NEXT_PUBLIC_APP_URL` to your Railway public URL (e.g. `https://your-service.up.railway.app`).
+4. In Supabase Auth, allow that URL as Site URL / redirect.
+5. Build uses `npm run build`; start uses `npm run start` (see `railway.toml`). Health check: `/api/health`.
 
 ## Database migrations
 
